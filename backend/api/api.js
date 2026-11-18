@@ -18,7 +18,101 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+const ReadJSONFile = async (filePath)=>{
+    try{
+        const raw = await fs.readFile(filePath, 'utf8');
+        return JSON.parse(raw)
+    }catch(error){
+        throw new Error("JSON olvasási hiba: ", error.message);
+    }
+};
+
 //!Endpoints:
+//*statisztikák
+router.get('/stat', async(request,response)=>{
+    try{
+        const utvonal = path.join(__dirname, '../files/barlangok.json');
+        const content = await ReadJSONFile(utvonal);
+
+        let leghosszabb = 0;
+        for(let i=0;i<content.length;i++){
+            if(content[leghosszabb].hossz<content[i].hossz){
+                leghosszabb = i;
+            }
+        }
+
+        let legmelyebb= 0;
+        for(let i=0;i<content.length;i++){
+            if(content[legmelyebb].melyseg<content[i].melyseg){
+                legmelyebb = i;
+            }
+        }
+
+        let fokozottanVedett = 0;
+        for(let i=0;i<content.length;i++){
+            if(content[i].vedettseg == "fokozottan védett"){
+                fokozottanVedett++;
+            }
+        }
+
+        response.status(200).json({
+            leghosszabb:content[leghosszabb].nev,
+            legmelyebb:content[legmelyebb].nev,
+            darab:content.length,
+            fokozottan:fokozottanVedett
+        })
+    }catch(error){
+        response.status(500).json({
+            message:"Hiba!"
+        });
+    }
+});
+
+
+
+//*azonosítója elérése
+router.get('/barlang/:azon', async (request,response)=>{
+    try{
+        const azonosito = request.params.azon;
+        const utvonal = path.join(__dirname, '../files/barlangok.json');
+        const content = await ReadJSONFile(utvonal);
+        let j=0;
+        while(j<content.length && content[j].azon!=azonosito){
+            j++;
+        }
+        response.status(200).json({
+            success:true,
+            barlang: content[j]
+        });
+        
+    }catch(error){
+        response.status(500).json({
+            success:false
+        })
+    }
+});
+
+
+
+//*Json beolvasas
+router.get('/barlangok', async(request,response)=>{
+    try{
+        const utvonal = path.join(__dirname, '../files/barlangok.json');
+        const content = await ReadJSONFile(utvonal);
+
+        response.status(200).json({
+            success: true,
+            content:content
+        });
+    }catch(error){
+        response.status(500).json({
+            success:true
+        });
+    }
+});
+
+
+
 //?GET /api/test
 router.get('/test', (request, response) => {
     response.status(200).json({
